@@ -520,17 +520,17 @@ Return Value:
     // Get the file name
     
     // To get the user requesting I/O, first get the token
-    TOKEN_USER** ppUser = NULL; // token user to be used to extract SID
-    PACCESS_TOKEN pToken = SeQuerySubjectContextToken(&(Data->Iopb->Parameters.Create.SecurityContext->AccessState->SubjectSecurityContext));
-    status = SeQueryInformationToken(pToken, TokenUser, ppUser);
+    //TOKEN_USER** ppUser = NULL; // token user to be used to extract SID
+    //PACCESS_TOKEN pToken = SeQuerySubjectContextToken(&(Data->Iopb->Parameters.Create.SecurityContext->AccessState->SubjectSecurityContext));
+    //status = SeQueryInformationToken(pToken, TokenUser, ppUser);
 
-    //// Extract the SID from TOKEN_USER
-    TOKEN_USER* pUser = *ppUser;
-    //char* strSID[200], *IdAuth;
-    //
-    //unsigned long dwStrSidSize = 0;
-    SID* sid = (SID*)pUser->User.Sid;
-    KdPrint(("Current SID: %s \r\n", sid->Revision));
+    ////// Extract the SID from TOKEN_USER
+    //TOKEN_USER* pUser = *ppUser;
+    ////char* strSID[200], *IdAuth;
+    ////
+    ////unsigned long dwStrSidSize = 0;
+    //SID* sid = (SID*)pUser->User.Sid;
+    //KdPrint(("Current SID: %s \r\n", sid->Revision));
     //dwStrSidSize = sprintf_s(strSID, sizeof(*strSID), "S-%u-", sid->Revision);
     //IdAuth = (sid->IdentifierAuthority.Value[5]) + (sid->IdentifierAuthority.Value[4] << 8) + (sid->IdentifierAuthority.Value[3] << 16) + (sid->IdentifierAuthority.Value[2] << 24);
     //dwStrSidSize += sprintf(strSID + strlen(strSID), "%u", *IdAuth);
@@ -539,7 +539,7 @@ Return Value:
     //    for (int index = 0; index < sid->SubAuthorityCount; index++)
     //        dwStrSidSize += sprintf(strSID + dwStrSidSize, "-%u", sid->SubAuthority[index]);
     //}
-
+ 
     //// Get the SID structure to retrive info
     //PSID* Sid;
     //ConvertStringSidToSidA(
@@ -564,7 +564,7 @@ Return Value:
     //);
 
     // get current user
-    //const char* current_loggedin_user = getenv("USERNAME");
+    const char* current_loggedin_user = getenv("USERNAME");
     //char* current_loggedin_user;
     //size_t requiredSize;
 
@@ -572,11 +572,11 @@ Return Value:
 
     //current_loggedin_user = (char*)malloc(requiredSize * sizeof(char));
 
-    // Get the value of the USERNAME environment variable.
+    //// Get the value of the USERNAME environment variable.
     //getenv_s(&requiredSize, current_loggedin_user, requiredSize, "USERNAME");
-    //const size_t cSize = strlen(current_loggedin_user) + 1;
-    //wchar_t current_loggedin_user_wchar[200] = { 0 };
-    //mbstowcs(current_loggedin_user_wchar, current_loggedin_user, cSize);
+    const size_t cSize = strlen(current_loggedin_user) + 1;
+    wchar_t current_loggedin_user_wchar[200] = { 0 };
+    mbstowcs(current_loggedin_user_wchar, current_loggedin_user, cSize);
     //LPDWORD current_loggedin_user_buf;
     //GetUserNameA(
     //    current_loggedin_user,
@@ -607,27 +607,27 @@ Return Value:
     // check for extension .... it should be 0 for a folder
     // retrive file name
     wchar_t file_name[200] = { 0 };
-    //wchar_t* pwc = NULL;
-    //const wchar_t delim[] = L"\u002e";// unicode for full stop
-    //wchar_t* ptr = NULL;
+    wchar_t* pwc = NULL;
+    const wchar_t delim[] = L"\u002e";// unicode for full stop
+    wchar_t* ptr = NULL;
 
     RtlCopyMemory(file_name, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
     //KdPrint(("Current logged in user: %ws \r\n", current_loggedin_user_wchar));
     KdPrint(("Current file: %ws \r\n", file_name));
-    //KdPrint(("Truncated file name: %ws \r\n", pwc));
 
-    //// get the file name only
-    //pwc = wcstok(file_name, delim, &ptr);
-    // 
-    //// check if it is a secret file with name equals to username
-    //if (wcsstr(pwc, current_loggedin_user_wchar) == NULL) {
-    //    KdPrint(("Blocked reading the file! \r\n"));
-    //    Data->IoStatus.Status = STATUS_INVALID_PARAMETER;
-    //    Data->IoStatus.Information = 0;
-    //    FltReleaseFileNameInformation(file_name_info);
+    // get the file name only
+    pwc = wcstok(file_name, delim, &ptr);
+    KdPrint(("Truncated file name: %ws \r\n", pwc));
 
-    //    return FLT_PREOP_COMPLETE;
-    //}
+    // check if it is a secret file with name equals to username
+    if (wcsstr(pwc, current_loggedin_user_wchar) == NULL) {
+        KdPrint(("Blocked reading the file! \r\n"));
+        Data->IoStatus.Status = STATUS_INVALID_PARAMETER;
+        Data->IoStatus.Information = 0;
+        FltReleaseFileNameInformation(file_name_info);
+
+        return FLT_PREOP_COMPLETE;
+    }
 
     return FLT_PREOP_SUCCESS_WITH_CALLBACK;
 
