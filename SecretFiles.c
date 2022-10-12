@@ -13,11 +13,16 @@ Environment:
     Kernel mode
 
 --*/
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <string.h>
+#include <wchar.h>
+
 #include <fltKernel.h>
 #include <dontuse.h>
 
 #pragma prefast(disable:__WARNING_ENCODE_MEMBER_FUNCTION_POINTER, "Not valid for kernel mode drivers")
-
 
 PFLT_FILTER gFilterHandle;
 ULONG_PTR OperationStatusCtx = 1;
@@ -84,12 +89,12 @@ SecretFilesPreOperation (
     _Flt_CompletionContext_Outptr_ PVOID *CompletionContext
     );
 
-FLT_PREOP_CALLBACK_STATUS
-SecretFilesPreCreate(
-    _Inout_ PFLT_CALLBACK_DATA Data,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects,
-    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-);
+//FLT_PREOP_CALLBACK_STATUS
+//SecretFilesPreCreate(
+//    _Inout_ PFLT_CALLBACK_DATA Data,
+//    _In_ PCFLT_RELATED_OBJECTS FltObjects,
+//    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext
+//);
 
 VOID
 SecretFilesOperationStatusCallback (
@@ -515,50 +520,70 @@ Return Value:
     // Get the file name
     
     // To get the user requesting I/O, first get the token
-    TOKEN_USER** ppUser; // token user to be used to extract SID
+    TOKEN_USER** ppUser = NULL; // token user to be used to extract SID
     PACCESS_TOKEN pToken = SeQuerySubjectContextToken(&(Data->Iopb->Parameters.Create.SecurityContext->AccessState->SubjectSecurityContext));
-    *ppUser = NULL;
     status = SeQueryInformationToken(pToken, TokenUser, ppUser);
 
-    // Extract the SID from TOKEN_USER
-    TOKEN_USER* pUser;
-    char* strSID, *IdAuth;
-
-    unsigned long dwStrSidSize = 0;
+    //// Extract the SID from TOKEN_USER
+    TOKEN_USER* pUser = *ppUser;
+    //char* strSID[200], *IdAuth;
+    //
+    //unsigned long dwStrSidSize = 0;
     SID* sid = (SID*)pUser->User.Sid;
-    dwStrSidSize = sprintf(strSID, "S-%u-", sid->Revision);
-    IdAuth = (sid->IdentifierAuthority.Value[5]) + (sid->IdentifierAuthority.Value[4] << 8) + (sid->IdentifierAuthority.Value[3] << 16) + (sid->IdentifierAuthority.Value[2] << 24);
-    dwStrSidSize += sprintf(strSID + strlen(strSID), "%u", IdAuth);
-    if (sid->SubAuthorityCount)
-    {
-        for (int index = 0; index < sid->SubAuthorityCount; index++)
-            dwStrSidSize += sprintf(strSID + dwStrSidSize, "-%u", sid->SubAuthority[index]);
-    }
+    KdPrint(("Current SID: %s \r\n", sid->Revision));
+    //dwStrSidSize = sprintf_s(strSID, sizeof(*strSID), "S-%u-", sid->Revision);
+    //IdAuth = (sid->IdentifierAuthority.Value[5]) + (sid->IdentifierAuthority.Value[4] << 8) + (sid->IdentifierAuthority.Value[3] << 16) + (sid->IdentifierAuthority.Value[2] << 24);
+    //dwStrSidSize += sprintf(strSID + strlen(strSID), "%u", *IdAuth);
+    //if (sid->SubAuthorityCount)
+    //{
+    //    for (int index = 0; index < sid->SubAuthorityCount; index++)
+    //        dwStrSidSize += sprintf(strSID + dwStrSidSize, "-%u", sid->SubAuthority[index]);
+    //}
 
-    // Get the SID structure to retrive info
-    PSID* Sid;
-    ConvertStringSidToSidA(
-        strSID,
-        Sid
-    );
+    //// Get the SID structure to retrive info
+    //PSID* Sid;
+    //ConvertStringSidToSidA(
+    //    strSID,
+    //    Sid
+    //);
 
-    // Retrive from SID
-    LPSTR* current_loggedin_user = NULL;
-    TCHAR* current_loggedin_user_bsize = NULL;
-    LPSTR* current_loggedin_user_domain = NULL;
-    TCHAR* current_loggedin_user_domain_bsize = NULL;
+    ////// Retrive from SID
+    //LPSTR* current_loggedin_user = L"zoho";
+    //TCHAR* current_loggedin_user_bsize = NULL;
+    //LPSTR* current_loggedin_user_domain = NULL;
+    //TCHAR* current_loggedin_user_domain_bsize = NULL;
 
-    LookupAccountSidA(
-        NULL,
-        Sid,
-        current_loggedin_user,
-        current_loggedin_user_bsize,
-        current_loggedin_user_domain,
-        current_loggedin_user_domain_bsize,
-        SidTypeUser
-    );
+    //LookupAccountSidA(
+    //    NULL,
+    //    Sid,
+    //    current_loggedin_user,
+    //    current_loggedin_user_bsize,
+    //    current_loggedin_user_domain,
+    //    current_loggedin_user_domain_bsize,
+    //    SidTypeUser
+    //);
 
-    NTSTATUS status;
+    // get current user
+    //const char* current_loggedin_user = getenv("USERNAME");
+    //char* current_loggedin_user;
+    //size_t requiredSize;
+
+    //getenv_s(&requiredSize, NULL, 0, "USERNAME");
+
+    //current_loggedin_user = (char*)malloc(requiredSize * sizeof(char));
+
+    // Get the value of the USERNAME environment variable.
+    //getenv_s(&requiredSize, current_loggedin_user, requiredSize, "USERNAME");
+    //const size_t cSize = strlen(current_loggedin_user) + 1;
+    //wchar_t current_loggedin_user_wchar[200] = { 0 };
+    //mbstowcs(current_loggedin_user_wchar, current_loggedin_user, cSize);
+    //LPDWORD current_loggedin_user_buf;
+    //GetUserNameA(
+    //    current_loggedin_user,
+    //    current_loggedin_user_buf
+    //);
+    //PsReferencePrimaryToken(PsGetCurrentProcess());
+
     // Get the file name info
     PFLT_FILE_NAME_INFORMATION file_name_info;
     status = FltGetFileNameInformation(Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT, &file_name_info);
@@ -581,79 +606,84 @@ Return Value:
     }
     // check for extension .... it should be 0 for a folder
     // retrive file name
-    WCHAR file_name[200] = { 0 };
-    wchar_t* pwc;
+    wchar_t file_name[200] = { 0 };
+    //wchar_t* pwc = NULL;
+    //const wchar_t delim[] = L"\u002e";// unicode for full stop
+    //wchar_t* ptr = NULL;
+
     RtlCopyMemory(file_name, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
-    KdPrint(("Current logged in user: %ws \r\n", current_loggedin_user));
+    //KdPrint(("Current logged in user: %ws \r\n", current_loggedin_user_wchar));
     KdPrint(("Current file: %ws \r\n", file_name));
-    KdPrint(("Truncated file name: %ws \r\n", pwc));
-    // get the file name only
-    pwc = wcstok(file_name, ".", pwc);
-    // check if it is a secrets folder
-    if (wcsstr(pwc, current_loggedin_user) == NULL) {
-        KdPrint(("Blocked reading the file! \r\n"));
-        Data->IoStatus.Status = STATUS_INVALID_PARAMETER;
-        Data->IoStatus.Information = 0;
-        FltReleaseFileNameInformation(file_name_info);
+    //KdPrint(("Truncated file name: %ws \r\n", pwc));
 
-        return FLT_PREOP_COMPLETE;
-    }
+    //// get the file name only
+    //pwc = wcstok(file_name, delim, &ptr);
+    // 
+    //// check if it is a secret file with name equals to username
+    //if (wcsstr(pwc, current_loggedin_user_wchar) == NULL) {
+    //    KdPrint(("Blocked reading the file! \r\n"));
+    //    Data->IoStatus.Status = STATUS_INVALID_PARAMETER;
+    //    Data->IoStatus.Information = 0;
+    //    FltReleaseFileNameInformation(file_name_info);
+
+    //    return FLT_PREOP_COMPLETE;
+    //}
 
     return FLT_PREOP_SUCCESS_WITH_CALLBACK;
 
 }
 
-FLT_PREOP_CALLBACK_STATUS
-SecretFilesPreCreate(
-    _Inout_ PFLT_CALLBACK_DATA Data,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects,
-    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext
-) {
-    NTSTATUS status;
-    // Get the file name info
-    PFLT_FILE_NAME_INFORMATION file_name_info;
-    status = FltGetFileNameInformation(Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT, &file_name_info);
-
-    if (!NT_SUCCESS(status)) {
-        KdPrint(("Cannot retrive file name info! \r\n"));
-        PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
-            ("SecretFiles!SecretFilesPreCreate: FltRequestOperationStatusCallback Failed, status=%08x\n",
-                status));
-    }
-
-    // Parse file name info
-    status = FltParseFileNameInformation(file_name_info);
-    if (!NT_SUCCESS(status)) {
-        KdPrint(("Cannot parse file name info! \r\n"));
-        FltReleaseFileNameInformation(file_name_info);
-        PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
-            ("SecretFiles!SecretFilesPreCreate: FltRequestOperationStatusCallback Failed, status=%08x\n",
-                status));
-    }
-    // check for extension .... it should be 0 for a folder
-    // returive file name
-    WCHAR folder_name[200] = { 0 };
-    WCHAR folder_name_upr[200] = { 0 };
-    RtlCopyMemory(folder_name, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
-    RtlCopyMemory(folder_name_upr, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
-    KdPrint(("%ws Created! \r\n", folder_name));
-    // check if it is a secrets folder
-    _wcsupr(folder_name_upr);
-    if (wcsstr(folder_name_upr, L"SECRETS") != NULL && file_name_info->Extension.MaximumLength == 0) {
-        KdPrint(("Changing permissions for secrets folder... \r\n"));
-        
-        // Change file permission, that only the creator can access the file
-        //FltSetSecurityObject
-
-        PSECURITY_DESCRIPTOR security_descriptor;
-        FltBuildDefaultSecurityDescriptor(&security_descriptor, WRITE_OWNER);
-
-        //FltSetSecurityObject(, , OWNER_SECURITY_INFORMATION, security_descriptor);
-    }
-
-
-    return FLT_PREOP_SUCCESS_WITH_CALLBACK;
-}
+//FLT_PREOP_CALLBACK_STATUS
+//SecretFilesPreCreate(
+//    _Inout_ PFLT_CALLBACK_DATA Data,
+//    _In_ PCFLT_RELATED_OBJECTS FltObjects,
+//    _Flt_CompletionContext_Outptr_ PVOID* CompletionContext
+//) {
+//    NTSTATUS status;
+//    // Get the file name info
+//    PFLT_FILE_NAME_INFORMATION file_name_info;
+//    status = FltGetFileNameInformation(Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT, &file_name_info);
+//
+//    if (!NT_SUCCESS(status)) {
+//        KdPrint(("Cannot retrive file name info! \r\n"));
+//        PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
+//            ("SecretFiles!SecretFilesPreCreate: FltRequestOperationStatusCallback Failed, status=%08x\n",
+//                status));
+//    }
+//
+//    // Parse file name info
+//    status = FltParseFileNameInformation(file_name_info);
+//    if (!NT_SUCCESS(status)) {
+//        KdPrint(("Cannot parse file name info! \r\n"));
+//        FltReleaseFileNameInformation(file_name_info);
+//        PT_DBG_PRINT(PTDBG_TRACE_OPERATION_STATUS,
+//            ("SecretFiles!SecretFilesPreCreate: FltRequestOperationStatusCallback Failed, status=%08x\n",
+//                status));
+//    }
+//    // check for extension .... it should be 0 for a folder
+//    // returive file name
+//    WCHAR folder_name[200] = { 0 };
+//    WCHAR folder_name_upr[200] = { 0 };
+//    RtlCopyMemory(folder_name, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
+//    RtlCopyMemory(folder_name_upr, file_name_info->Name.Buffer, file_name_info->Name.MaximumLength);
+//    KdPrint(("%ws Created! \r\n", folder_name));
+//    // check if it is a secrets folder
+//    _wcsupr(folder_name_upr);
+//    if (wcsstr(folder_name_upr, L"SECRETS") != NULL && file_name_info->Extension.MaximumLength == 0) {
+//        KdPrint(("Changing permissions for secrets folder... \r\n"));
+//        
+//        // Change file permission, that only the creator can access the file
+//        //FltSetSecurityObject
+//
+//        PSECURITY_DESCRIPTOR security_descriptor;
+//        FltBuildDefaultSecurityDescriptor(&security_descriptor, WRITE_OWNER);
+//
+//        //FltSetSecurityObject(, , OWNER_SECURITY_INFORMATION, security_descriptor);
+//    }
+//
+//
+//    return FLT_PREOP_SUCCESS_WITH_CALLBACK;
+//}
 
 
 VOID
